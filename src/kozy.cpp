@@ -1,6 +1,8 @@
 #include <iostream>
+#include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
@@ -8,12 +10,18 @@
 #include <chibi/eval.h> 
 
 using std::string, std::to_string, std::u32string;
+using std::vector, std::function;
 
 using sf::Keyboard, sf::Event, sf::Window, sf::Text;
+using sf::Time, sf::Clock;
+
+/////// Scheme
 
 void dostring(sexp& ctx, string& dome) {
   sexp_eval_string(ctx, dome.c_str(), -1, NULL);
 }
+
+/////// Input Events
 
 bool key_p(Event& event, Keyboard::Key key) {
   return event.type == Event::KeyPressed && event.key.code == key;
@@ -28,12 +36,12 @@ Event& listen_close(Event& event, Window& window) {
   return event;
 }
 
-char keyToChar(Event::TextEvent text) {
+char key_to_char(Event::TextEvent text) {
 
   return text.unicode < 128 ? static_cast<char>(text.unicode) : '\0';
 }
 
-void processBackspaces(string& str) {
+void process_backspaces(string& str) {
 
   size_t pos = str.find('\b');
 
@@ -43,7 +51,7 @@ void processBackspaces(string& str) {
   }
 }
 
-void processEnter(string& str, sexp& ctx) {
+void process_enter(string& str, sexp& ctx) {
 
   size_t pos = str.find('\r');
 
@@ -57,12 +65,12 @@ void processEnter(string& str, sexp& ctx) {
 Event& listen_typing(Event& event, string& buf, sexp& ctx) {
 
   const char value = event.type == Event::TextEntered ?
-    keyToChar(event.text) : '\0';
+    key_to_char(event.text) : '\0';
 
   if(value != '\0') buf.push_back(value);
 
-  processBackspaces(buf);
-  processEnter(buf, ctx);
+  process_backspaces(buf);
+  process_enter(buf, ctx);
   
   return event;
 }
@@ -76,9 +84,13 @@ void pump_events(Window& window, string& inputBuf, sexp& ctx) {
   }
 }
 
+/////// KOZY
+///////
+///////
+
 int main() {
 
-
+  /// Scheme Init
   sexp ctx;
   sexp_scheme_init();
   ctx = sexp_make_eval_context(NULL, NULL, NULL, 0, 0);
@@ -88,10 +100,12 @@ int main() {
   string dome = "(display \"hi\")";
   dostring(ctx, dome);
   std::cout << "\n";
-  
+
+  /// Window Init
   sf::Vector2i screenSize(640, 480);
   sf::RenderWindow window(sf::VideoMode(screenSize.x, screenSize.y), "kozy");
 
+  /// Asset Init
   sf::Font font;
   if (!font.loadFromFile("Ricty-Bold.ttf")) {
     std::cout << "Failed to load ricty...\n";
@@ -105,34 +119,49 @@ int main() {
   framecounter.setFillColor(sf::Color::White);
 
   string input = "";
-  Text inputLine;
-  inputLine.setFont(font);
-  inputLine.setString(input);
-  inputLine.setCharacterSize(24);
-  inputLine.setFillColor(sf::Color::Cyan);
-  inputLine.setPosition(0.0f, 32.0f);
-  
-  sf::Clock frameClock = sf::Clock();
-  
-  while(window.isOpen()) {
-    
-    pump_events(window, input, ctx);
+  Text inputline;
+  inputline.setFont(font);
+  inputline.setString(input);
+  inputline.setCharacterSize(24);
+  inputline.setFillColor(sf::Color::Cyan);
+  inputline.setPosition(0.0f, 32.0f);
 
-    sf::Time frameTime = frameClock.restart();
-    
-    // physics
-    framecounter.setString(frameout + to_string(frameTime.asMicroseconds()));
-    inputLine.setString(input);
-    
-    // rendition
-    window.clear(sf::Color::Black);
-    window.draw(framecounter);
-    window.draw(inputLine);
-    window.display();
-  }
+  function<void(int)> physics =
+    [&](int dt_micros){
 
-  sexp_destroy_context(ctx);
+      framecounter.setString(frameout + to_string(dt_micros));
+      inputline.setString(input);
+    };
+
+  function<void(int)> rendition =
+    [&](int dt_micros){
+      
+      window.clear(sf::Color::Black);
+      window.draw(framecounter);
+      window.draw(inputline);
+      window.display();     
+    };
+
+  function<void(function<void(int)>, function<void(int)>)> dowork =
+    [&](function<void(int)> physics, function<void(int)> rendition) {
+
+      Clock frame_clock = Clock();
   
+      while(window.isOpen()) {
+    
+        pump_events(window, input, ctx); // the shadow of time?
+
+        Time frame_time = frame_clock.restart();
+    
+        physics(frame_time.asMicroseconds());
+        rendition(frame_time.asMicroseconds());
+      }
+
+      sexp_destroy_context(ctx);
+    };
+
+  dowork(physics, rendition);
+    
   return 0;
 }
 
