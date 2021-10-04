@@ -72,6 +72,13 @@ void listen_typing(Event& event, string& buf, sexp& ctx) {
 ///////
 ///////
 
+template <typename State>
+struct Mode {
+  function<State(int)> physics;
+  function<void(State)> rendition;
+  vector<function<void(Event&)>> handlers;
+};
+
 int main() {
 
   /// Scheme Init
@@ -111,7 +118,7 @@ int main() {
   Text inputline = default_text(sf::Color::Cyan);
   inputline.setPosition(0.0f, 32.0f);
 
-  function<void(int)> physics =
+  function<int(int)> physics =
     [&](int dt_micros){
       // wants old state entities and associated behavior
       
@@ -119,10 +126,11 @@ int main() {
       inputline.setString(input);
 
       // produces new state
+      return 1;
     };
 
   function<void(int)> rendition =
-    [&](int dt_micros){
+    [&](int state){
       // wants entity state and drawing info(?)
       
       window.clear(sf::Color::Black);
@@ -138,38 +146,34 @@ int main() {
      bind(listen_close, _1, ref(window)),
      bind(listen_typing, _1, ref(input), ref(ctx))
     };
+
+  Mode<int> prime = {physics, rendition, handlers};
   
-  function<void(function<void(int)>,
-                function<void(int)>,
-                vector<function<void(Event&)>>&)> do_mode =
-    [&](function<void(int)> physics,
-        function<void(int)> rendition,
-        vector<function<void(Event&)>>& handlers) {
+  function<void(Mode<int>&)> do_mode =
+    [&](Mode<int>& mode) {
 
       Clock frame_clock = Clock();
+      Time frame_time;
+      Event event;
   
       while(window.isOpen()) {
     
-        Event event;
         while (window.pollEvent(event)) {
           
-          for_each(handlers.begin(),
-                   handlers.end(),
-                   [&](function<void(Event&)> handler){
-                     handler(event);
-                   });
+          for(auto& handler : mode.handlers) {
+            handler(event);
+          }
         }
         
-        Time frame_time = frame_clock.restart();
+        frame_time = frame_clock.restart();
     
-        physics(frame_time.asMicroseconds());
-        rendition(frame_time.asMicroseconds());
+        mode.rendition(mode.physics(frame_time.asMicroseconds()));
       }
 
       sexp_destroy_context(ctx);
     };
 
-  do_mode(physics, rendition, handlers);
+  do_mode(prime);
   
   return 0;
 }
