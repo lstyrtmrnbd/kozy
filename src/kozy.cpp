@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <functional>
 #include <memory>
@@ -11,6 +12,9 @@
 
 using std::string, std::to_string;
 using std::vector, std::function;
+using std::bind, std::for_each;
+using namespace std::placeholders;
+using std::ref;
 
 using sf::Keyboard, sf::Event;
 using sf::Window, sf::Text;
@@ -28,13 +32,11 @@ bool key_p(Event& event, Keyboard::Key key) {
   return event.type == Event::KeyPressed && event.key.code == key;
 }
 
-Event& listen_close(Event& event, Window& window) {
+void listen_close(Event& event, Window& window) {
 
   if(key_p(event, Keyboard::Escape) || event.type == Event::Closed) {
     window.close();
   }
-  
-  return event;
 }
 
 void process_backspaces(string& str) {
@@ -58,23 +60,12 @@ void process_enter(string& str, sexp& ctx) {
   }
 }
 
-Event& listen_typing(Event& event, string& buf, sexp& ctx) {
+void listen_typing(Event& event, string& buf, sexp& ctx) {
 
   if(event.type == Event::TextEntered) buf.push_back(event.text.unicode);
   
   process_backspaces(buf);
   process_enter(buf, ctx);
-  
-  return event;
-}
-
-void pump_events(Window& window, string& inputBuf, sexp& ctx) {
-  Event event;
-  while (window.pollEvent(event)) {
-
-    listen_close(event, window);
-    listen_typing(event, inputBuf, ctx);
-  }
 }
 
 /////// KOZY
@@ -142,15 +133,33 @@ int main() {
       // produces side effect ;)
     };
 
-  function<void(function<void(int)>, function<void(int)>)> dowork =
-    [&](function<void(int)> physics, function<void(int)> rendition) {
+  vector<function<void(Event&)>> handlers =
+    {
+     bind(listen_close, _1, ref(window)),
+     bind(listen_typing, _1, ref(input), ref(ctx))
+    };
+  
+  function<void(function<void(int)>,
+                function<void(int)>,
+                vector<function<void(Event&)>>&)> do_mode =
+    [&](function<void(int)> physics,
+        function<void(int)> rendition,
+        vector<function<void(Event&)>>& handlers) {
 
       Clock frame_clock = Clock();
   
       while(window.isOpen()) {
     
-        pump_events(window, input, ctx);
-
+        Event event;
+        while (window.pollEvent(event)) {
+          
+          for_each(handlers.begin(),
+                   handlers.end(),
+                   [&](function<void(Event&)> handler){
+                     handler(event);
+                   });
+        }
+        
         Time frame_time = frame_clock.restart();
     
         physics(frame_time.asMicroseconds());
@@ -160,7 +169,7 @@ int main() {
       sexp_destroy_context(ctx);
     };
 
-  dowork(physics, rendition);
+  do_mode(physics, rendition, handlers);
   
   return 0;
 }
