@@ -9,10 +9,11 @@
 
 #include <chibi/eval.h> 
 
-using std::string, std::to_string, std::u32string;
+using std::string, std::to_string;
 using std::vector, std::function;
 
-using sf::Keyboard, sf::Event, sf::Window, sf::Text;
+using sf::Keyboard, sf::Event;
+using sf::Window, sf::Text;
 using sf::Time, sf::Clock;
 
 /////// Scheme
@@ -34,11 +35,6 @@ Event& listen_close(Event& event, Window& window) {
   }
   
   return event;
-}
-
-char key_to_char(Event::TextEvent text) {
-
-  return text.unicode < 128 ? static_cast<char>(text.unicode) : '\0';
 }
 
 void process_backspaces(string& str) {
@@ -64,11 +60,8 @@ void process_enter(string& str, sexp& ctx) {
 
 Event& listen_typing(Event& event, string& buf, sexp& ctx) {
 
-  const char value = event.type == Event::TextEntered ?
-    key_to_char(event.text) : '\0';
-
-  if(value != '\0') buf.push_back(value);
-
+  if(event.type == Event::TextEntered) buf.push_back(event.text.unicode);
+  
   process_backspaces(buf);
   process_enter(buf, ctx);
   
@@ -111,35 +104,42 @@ int main() {
     std::cout << "Failed to load ricty...\n";
   }
 
+  function<Text(sf::Color)> default_text =
+    [&](sf::Color color){
+      Text text;
+      text.setFont(font);
+      text.setCharacterSize(24);
+      text.setFillColor(color);
+      return text;
+    };
+  
   string frameout = "Current frame time: ";
-  Text framecounter;
-  framecounter.setFont(font);
-  framecounter.setString(frameout);
-  framecounter.setCharacterSize(24); // in pixels, not points!
-  framecounter.setFillColor(sf::Color::White);
+  Text framecounter = default_text(sf::Color::White);
 
   string input = "";
-  Text inputline;
-  inputline.setFont(font);
-  inputline.setString(input);
-  inputline.setCharacterSize(24);
-  inputline.setFillColor(sf::Color::Cyan);
+  Text inputline = default_text(sf::Color::Cyan);
   inputline.setPosition(0.0f, 32.0f);
 
   function<void(int)> physics =
     [&](int dt_micros){
-
+      // wants old state entities and associated behavior
+      
       framecounter.setString(frameout + to_string(dt_micros));
       inputline.setString(input);
+
+      // produces new state
     };
 
   function<void(int)> rendition =
     [&](int dt_micros){
+      // wants entity state and drawing info(?)
       
       window.clear(sf::Color::Black);
       window.draw(framecounter);
       window.draw(inputline);
-      window.display();     
+      window.display();
+
+      // produces side effect ;)
     };
 
   function<void(function<void(int)>, function<void(int)>)> dowork =
@@ -149,7 +149,7 @@ int main() {
   
       while(window.isOpen()) {
     
-        pump_events(window, input, ctx); // the shadow of time?
+        pump_events(window, input, ctx);
 
         Time frame_time = frame_clock.restart();
     
@@ -161,7 +161,7 @@ int main() {
     };
 
   dowork(physics, rendition);
-    
+  
   return 0;
 }
 
