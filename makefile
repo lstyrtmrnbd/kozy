@@ -8,6 +8,12 @@ SOURCES = $(wildcard src/*.cpp)
 
 OBJ = $(SOURCES:.cpp=.o)
 
+src/chub.c: src/chub.stub
+	chibi-ffi $^
+
+src/chub.o: src/chub.c
+	$(CXX) $(FLAGS) $^ -lchibi-scheme
+
 all: $(OBJ)
 	$(CXX) $(FLAGS) -o kozy.bin $^ $(LINK)
 

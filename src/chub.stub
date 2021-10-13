@@ -1,0 +1,5 @@
+
+
+(define-c-struct point
+  (float x)
+  (float y))
