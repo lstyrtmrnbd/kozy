@@ -74,10 +74,35 @@ void listen_typing(Event& event, string& buf, sexp& ctx) {
 
 template <typename State>
 struct Mode {
-  function<State(int)> physics;
+  State state;
+  function<State(State, int)> physics;
   function<void(State)> rendition;
   vector<function<void(Event&)>> handlers;
 };
+
+// parameters: time system, event system
+template <typename State>
+void do_mode(Mode<State>& mode, Window& window) {
+
+  Clock frame_clock = Clock();
+  Time frame_time;
+  Event event;
+  
+  while(window.isOpen()) {
+    
+    while (window.pollEvent(event)) {
+          
+      for(auto& handler : mode.handlers) {
+        handler(event); // event pump prods state...
+      }
+    }
+        
+    frame_time = frame_clock.restart();
+    // state gets updated by physics
+    mode.state = mode.physics(mode.state, frame_time.asMicroseconds());
+    mode.rendition(mode.state); // state gets rendered
+  }
+}
 
 int main() {
 
@@ -118,63 +143,41 @@ int main() {
   Text inputline = default_text(sf::Color::Cyan);
   inputline.setPosition(0.0f, 32.0f);
 
-  function<int(int)> physics =
-    [&](int dt_micros){
-      // wants old state entities and associated behavior
-      
-      framecounter.setString(frameout + to_string(dt_micros));
-      inputline.setString(input);
-
-      // produces new state
-      return 1;
-    };
-
-  function<void(int)> rendition =
-    [&](int state){
-      // wants entity state and drawing info(?)
-      
-      window.clear(sf::Color::Black);
-      window.draw(framecounter);
-      window.draw(inputline);
-      window.display();
-
-      // produces side effect ;)
-    };
-
-  vector<function<void(Event&)>> handlers =
+  //// Constructing a Mode
+  Mode<int> prime =
     {
-     bind(listen_close, _1, ref(window)),
-     bind(listen_typing, _1, ref(input), ref(ctx))
+     1, // initial state
+     
+     [&](int state, int dt_micros){
+       // wants old state entities and associated behavior
+      
+       framecounter.setString(frameout + to_string(dt_micros));
+       inputline.setString(input);
+
+       // produces new state
+       return 1;
+     },
+     
+     [&](int state){
+       // wants entity state and drawing info(?)
+      
+       window.clear(sf::Color::Black);
+       window.draw(framecounter);
+       window.draw(inputline);
+       window.display();
+
+       // produces side effect ;)
+     },
+     // event handlers
+     {
+      bind(listen_close, _1, ref(window)),
+      bind(listen_typing, _1, ref(input), ref(ctx))
+     }
     };
 
-  Mode<int> prime = {physics, rendition, handlers};
+  do_mode(prime, window);
   
-  function<void(Mode<int>&)> do_mode =
-    [&](Mode<int>& mode) {
-
-      Clock frame_clock = Clock();
-      Time frame_time;
-      Event event;
-  
-      while(window.isOpen()) {
-    
-        while (window.pollEvent(event)) {
-          
-          for(auto& handler : mode.handlers) {
-            handler(event);
-          }
-        }
-        
-        frame_time = frame_clock.restart();
-    
-        mode.rendition(mode.physics(frame_time.asMicroseconds()));
-      }
-
-      sexp_destroy_context(ctx);
-    };
-
-  do_mode(prime);
-  
+  sexp_destroy_context(ctx);
   return 0;
 }
 
