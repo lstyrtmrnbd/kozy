@@ -75,7 +75,7 @@ void listen_typing(Event& event, string& buf, sexp& ctx) {
 template <typename State>
 struct Mode {
   State state;
-  function<State(State, int)> physics;
+  function<State(State)> physics;
   function<void(State)> rendition;
   vector<function<void(Event&)>> handlers;
 };
@@ -84,22 +84,37 @@ struct Mode {
 template <typename State>
 void do_mode(Mode<State>& mode, Window& window) {
 
+  // length of each physics step
+  Time dt = sf::milliseconds(16);
+  
   Clock frame_clock = Clock();
-  Time frame_time;
+
+  Time frame_time, // how long each render + event cycle took
+    accumulator;   // remainder of time to be simulated
+  
   Event event;
   
   while(window.isOpen()) {
     
-    while (window.pollEvent(event)) {
+    while(window.pollEvent(event)) {
           
       for(auto& handler : mode.handlers) {
-        handler(event); // event pump prods state...
+        handler(event); // event pump prods state
       }
     }
-        
+
     frame_time = frame_clock.restart();
-    // state gets updated by physics
-    mode.state = mode.physics(mode.state, frame_time.asMicroseconds());
+    accumulator += frame_time;
+    auto steps = accumulator.asMilliseconds() / dt.asMilliseconds();
+    
+    for(auto i = 0; i < steps; ++i) {
+      // state gets updated by physics but
+      // assigning to a data member each step: not very cool
+      mode.state = mode.physics(mode.state);  
+    }
+
+    accumulator %= dt;
+    
     mode.rendition(mode.state); // state gets rendered
   }
 }
@@ -148,10 +163,10 @@ int main() {
     {
      1, // initial state
      
-     [&](int state, int dt_micros){
+     [&](int state){
        // wants old state entities and associated behavior
       
-       framecounter.setString(frameout + to_string(dt_micros));
+       framecounter.setString("Hello and welcome");
        inputline.setString(input);
 
        // produces new state
