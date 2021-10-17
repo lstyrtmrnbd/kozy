@@ -3,12 +3,17 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
 
 #include <chibi/eval.h> 
+
+#include "mode.hpp";
+
+using std::pair;
 
 using std::string, std::to_string;
 using std::vector, std::function;
@@ -18,7 +23,6 @@ using std::ref;
 
 using sf::Keyboard, sf::Event;
 using sf::Window, sf::Text;
-using sf::Time, sf::Clock;
 
 /////// Scheme
 
@@ -72,53 +76,6 @@ void listen_typing(Event& event, string& buf, sexp& ctx) {
 ///////
 ///////
 
-template <typename State>
-struct Mode {
-  State state;
-  function<State(State)> physics;
-  function<void(State)> rendition;
-  vector<function<void(Event&)>> handlers;
-};
-
-// parameters: time system, event system
-template <typename State>
-void do_mode(Mode<State>& mode, Window& window) {
-
-  // length of each physics step
-  Time dt = sf::milliseconds(16);
-  
-  Clock frame_clock = Clock();
-
-  Time frame_time, // how long each render + event cycle took
-    accumulator;   // remainder of time to be simulated
-  
-  Event event;
-  
-  while(window.isOpen()) {
-    
-    while(window.pollEvent(event)) {
-          
-      for(auto& handler : mode.handlers) {
-        handler(event); // event pump prods state
-      }
-    }
-
-    frame_time = frame_clock.restart();
-    accumulator += frame_time;
-    auto steps = accumulator.asMilliseconds() / dt.asMilliseconds();
-    
-    for(auto i = 0; i < steps; ++i) {
-      // state gets updated by physics but
-      // assigning to a data member each step: not very cool
-      mode.state = mode.physics(mode.state);  
-    }
-
-    accumulator %= dt;
-    
-    mode.rendition(mode.state); // state gets rendered
-  }
-}
-
 int main() {
 
   /// Scheme Init
@@ -127,8 +84,17 @@ int main() {
   ctx = sexp_make_eval_context(NULL, NULL, NULL, 0, 0);
   sexp_load_standard_env(ctx, NULL, SEXP_SEVEN);
   sexp_load_standard_ports(ctx, NULL, stdin, stdout, stderr, 1);
+
+  pair<int, int> testpair{4,20};
   
-  string dome = "(display \"hi\")";
+  sexp env = sexp_context_env(ctx);
+  sexp a = sexp_make_fixnum(testpair.first);
+  sexp b = sexp_make_fixnum(testpair.second);
+  sexp param = sexp_cons(ctx, a, b);
+
+  sexp_env_define(ctx, env, sexp_string_to_symbol(ctx, sexp_c_string(ctx, "param", -1)), param);
+  
+  string dome = "(display param)";
   dostring(ctx, dome);
   std::cout << "\n";
 
