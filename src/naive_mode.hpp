@@ -35,6 +35,11 @@ sexp box(sexp&ctx, ipair& data) {
                    sexp_make_fixnum(data.second));
 }
 
+template <>
+sexp box(sexp& ctx, string& data) {
+  return sexp_c_string(ctx, data.c_str(), -1);
+}
+
 template <typename Data>
 Data unbox(sexp& data);
 
@@ -44,6 +49,11 @@ ipair unbox(sexp& data) {
       sexp_unbox_fixnum(sexp_car(data)),
       sexp_unbox_fixnum(sexp_cdr(data))
       };
+}
+
+template <>
+string unbox(sexp& data) {
+  return string(sexp_string_data(data));
 }
 
 // turn a sexp into a transform, given a box/unbox implementation

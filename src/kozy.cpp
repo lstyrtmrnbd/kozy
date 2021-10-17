@@ -11,7 +11,7 @@
 
 #include <chibi/eval.h> 
 
-#include "mode.hpp";
+#include "mode.hpp"
 #include "naive_mode.hpp"
 
 using std::pair;
@@ -94,6 +94,11 @@ int main() {
   sexp param = sexp_cons(ctx, a, b);
 
   sexp_env_define(ctx, env, sexp_string_to_symbol(ctx, sexp_c_string(ctx, "param", -1)), param);
+
+  string greetz = "greetz";
+  sexp greeting = box(ctx, greetz);
+  sexp greeting_sym = sexp_string_to_symbol(ctx, sexp_c_string(ctx, "greeting", -1));
+  sexp_env_define(ctx, env, greeting_sym, greeting);
   
   string dome = "(display param)";
   dostring(ctx, dome);
@@ -132,8 +137,9 @@ int main() {
      
      [&](int state){
        // wants old state entities and associated behavior
-      
-       framecounter.setString("Hello and welcome");
+       sexp getme = sexp_env_ref(ctx, env, greeting_sym, greeting);
+       string setme = unbox<string>(getme);
+       framecounter.setString(setme);
        inputline.setString(input);
 
        // produces new state
