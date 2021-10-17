@@ -12,6 +12,7 @@
 #include <chibi/eval.h> 
 
 #include "mode.hpp";
+#include "naive_mode.hpp"
 
 using std::pair;
 

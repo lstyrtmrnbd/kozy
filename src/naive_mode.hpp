@@ -3,11 +3,13 @@
 #include <iostream>
 #include <string>
 #include <utility>
+#include <vector>
+
 #include <chibi/eval.h> 
 
 #include "mode.hpp"
 
-using std::string, std::pair;
+using std::vector, std::string, std::pair;
 
 /**
  * The Naive Mode
@@ -24,19 +26,19 @@ struct Physical {
 };
 
 template <typename Data>
-sexp box(Data& data);
+sexp box(sexp& ctx, Data& data);
 
-template <ipair>
-sexp box(ipair& data) {
+template <>
+sexp box(sexp&ctx, ipair& data) {
   return sexp_cons(ctx,
-                   sexp_make_fixnum(var.first),
-                   sexp_make_fixnum(var.second));
+                   sexp_make_fixnum(data.first),
+                   sexp_make_fixnum(data.second));
 }
 
 template <typename Data>
 Data unbox(sexp& data);
 
-template <ipair>
+template <>
 ipair unbox(sexp& data) {
   return ipair {
       sexp_unbox_fixnum(sexp_car(data)),
@@ -48,20 +50,26 @@ ipair unbox(sexp& data) {
 template <typename Data>
 function<Data(Data)> scheme_behavior(sexp& ctx, sexp& behavior) {
 
-  return [](Data data) {
-           retun unbox(sexp_apply(ctx, behavior, box(data)));
+  return [&](Data data) {
+           return unbox(sexp_apply(ctx, behavior, box(ctx, data)));
          };
 }
 
 template <typename Var>
 void embed_variable(sexp& ctx, string name, Var& var);
 
-template <ipair>
+template <>
 void embed_variable(sexp& ctx, string name, ipair& var) {
   sexp_env_define(ctx,
                   sexp_context_env(ctx),
                   sexp_string_to_symbol(ctx,
                                         sexp_c_string(ctx, name.c_str(), -1)),
-                  box(var));
+                  box(ctx, var));
 }
 
+
+using naive = Physical<vector<ipair>>;
+
+// Mode<naive> make_naive_mode() {
+
+// }
