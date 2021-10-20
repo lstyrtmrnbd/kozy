@@ -5,18 +5,19 @@
 #include <utility>
 #include <vector>
 
+#include <SFML/System.hpp>
+#include <SFML/Graphics.hpp>
+
 #include <chibi/eval.h> 
 
 #include "mode.hpp"
+#include "schemes.hpp"
 
-using std::vector, std::string, std::pair;
+using std::vector,  std::pair, std::string, std::to_string;
+using std::function, std::bind, std::ref;
+using namespace std::placeholders;
 
-/**
- * The Naive Mode
- * - it's all schemes
- */
-
-using ipair = pair<int, int>;
+using sf::Keyboard, sf::Event, sf::Window, sf::RenderWindow, sf::Text;
 
 // the atomic physical unit, some data and a transform
 template <typename Data>
@@ -25,61 +26,23 @@ struct Physical {
   function<Data(Data)>& behavior;
 };
 
-template <typename Data>
-sexp box(sexp& ctx, Data& data);
+/////// Input Events
 
-template <>
-sexp box(sexp&ctx, ipair& data) {
-  return sexp_cons(ctx,
-                   sexp_make_fixnum(data.first),
-                   sexp_make_fixnum(data.second));
-}
+bool key_p(Event& event, Keyboard::Key key);
+void dostring(sexp ctx, const string& dome);
+void listen_close(Event& event, RenderWindow& window);
+void process_backspaces(string& str);
+void process_enter(string& str, sexp ctx);
+void listen_typing(Event& event, string* buf, sexp ctx);
 
-template <>
-sexp box(sexp& ctx, string& data) {
-  return sexp_c_string(ctx, data.c_str(), -1);
-}
+//using naive = Physical<vector<ipair>>;
+//using ipair = pair<int, int>;
+//using naive = int;
 
-template <typename Data>
-Data unbox(sexp& data);
+struct Naive {
+  Text inputline;
+  Text framecounter;
+  string* input;
+};
 
-template <>
-ipair unbox(sexp& data) {
-  return ipair {
-      sexp_unbox_fixnum(sexp_car(data)),
-      sexp_unbox_fixnum(sexp_cdr(data))
-      };
-}
-
-template <>
-string unbox(sexp& data) {
-  return string(sexp_string_data(data));
-}
-
-// turn a sexp into a transform, given a box/unbox implementation
-template <typename Data>
-function<Data(Data)> scheme_behavior(sexp& ctx, sexp& behavior) {
-
-  return [&](Data data) {
-           return unbox(sexp_apply(ctx, behavior, box(ctx, data)));
-         };
-}
-
-template <typename Var>
-void embed_variable(sexp& ctx, string name, Var& var);
-
-template <>
-void embed_variable(sexp& ctx, string name, ipair& var) {
-  sexp_env_define(ctx,
-                  sexp_context_env(ctx),
-                  sexp_string_to_symbol(ctx,
-                                        sexp_c_string(ctx, name.c_str(), -1)),
-                  box(ctx, var));
-}
-
-
-using naive = Physical<vector<ipair>>;
-
-// Mode<naive> make_naive_mode() {
-
-// }
+Mode<Naive> make_naive_mode(sexp& ctx, RenderWindow& window);

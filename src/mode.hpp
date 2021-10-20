@@ -22,8 +22,8 @@ using sf::Window, sf::Event;
 template <typename State>
 struct Mode {
   State state;
-  function<State(State)> physics;
-  function<void(State)> rendition;
+  function<void(State&)> physics;
+  function<void(State&)> rendition;
   vector<function<void(Event&)>> handlers;
 };
 
@@ -56,7 +56,7 @@ void do_mode(Mode<State>& mode, Window& window) {
     for(auto i = 0; i < steps; ++i) {
       // state gets updated by physics but
       // assigning to a data member each step: not very cool
-      mode.state = mode.physics(mode.state);  
+      mode.physics(mode.state);  
     }
 
     accumulator %= dt;
