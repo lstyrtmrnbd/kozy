@@ -45,4 +45,4 @@ struct Naive {
   string* input;
 };
 
-Mode<Naive> make_naive_mode(sexp& ctx, RenderWindow& window);
+Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window);

@@ -12,7 +12,6 @@
 #include <chibi/eval.h> 
 
 #include "mode.hpp"
-#include "schemes.hpp"
 #include "naive_mode.hpp"
 
 /////// KOZY
@@ -29,8 +28,7 @@ int main() {
   sexp_load_standard_ports(ctx, NULL, stdin, stdout, stderr, 1);
 
   /// Window Initialization
-  sf::Vector2i screenSize(640, 480);
-  sf::RenderWindow window(sf::VideoMode(screenSize.x, screenSize.y), "kozy");
+  sf::RenderWindow window(sf::VideoMode(640, 480), "kozy");
 
   auto mode = make_naive_mode(ctx, window);
 

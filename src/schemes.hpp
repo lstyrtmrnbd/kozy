@@ -1,45 +1,29 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <utility>
 
 #include <chibi/eval.h> 
 
-using std::string, std::pair;
+using std::string, std::pair, std::function;
 using ipair = pair<int, int>;
 
 //// Scheme interaction layer
 
 template <typename Data>
 sexp box(sexp& ctx, Data& data);
-
 template <>
-sexp box(sexp&ctx, ipair& data) {
-  return sexp_cons(ctx,
-                   sexp_make_fixnum(data.first),
-                   sexp_make_fixnum(data.second));
-}
-
+sexp box(sexp&ctx, ipair& data);
 template <>
-sexp box(sexp& ctx, string& data) {
-  return sexp_c_string(ctx, data.c_str(), -1);
-}
+sexp box(sexp& ctx, string& data);
 
 template <typename Data>
 Data unbox(sexp& data);
-
 template <>
-ipair unbox(sexp& data) {
-  return ipair {
-      sexp_unbox_fixnum(sexp_car(data)),
-      sexp_unbox_fixnum(sexp_cdr(data))
-      };
-}
-
+ipair unbox(sexp& data);
 template <>
-string unbox(sexp& data) {
-  return string(sexp_string_data(data));
-}
+string unbox(sexp& data);
 
 // turn a sexp into a transform,
 // given a box/unbox implementation for the Data type
@@ -56,10 +40,4 @@ template <typename Data>
 void embed_variable(sexp& ctx, string name, Data& var);
 
 template <>
-void embed_variable(sexp& ctx, string name, ipair& var) {
-  sexp_env_define(ctx,
-                  sexp_context_env(ctx),
-                  sexp_string_to_symbol(ctx,
-                                        sexp_c_string(ctx, name.c_str(), -1)),
-                  box(ctx, var));
-}
+void embed_variable(sexp& ctx, string name, ipair& var);

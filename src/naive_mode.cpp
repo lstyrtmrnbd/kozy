@@ -45,7 +45,6 @@ void listen_typing(Event& event, string* buf, sexp ctx) {
   process_enter(*buf, ctx);
 }
 
-
 Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
 
   /// Scheme parameter initialization
@@ -98,13 +97,12 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
   std::cout << "finner return\n";
   
   return Mode<Naive> {
-    {
+    {// initial State
       inputline, framecounter, input
-    }, // initial state
+    },
      
-      [ctx, env, greeting, greeting_sym](Naive& state) {
+    [ctx, env, greeting, greeting_sym](Naive& state) {
         
-      // wants old state entities and associated behavior
       sexp getme = sexp_env_ref(ctx, env, greeting_sym, greeting);
       string setme = unbox<string>(getme);
       state.framecounter.setString(setme);
@@ -114,7 +112,7 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
     },
       
     [&window](Naive& state){
-      // wants entity state and drawing info(?)
+      // wants drawing info(?)
         
       window.clear(sf::Color::Black);
       window.draw(state.framecounter);
@@ -126,7 +124,7 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
     // event handlers
     {
       bind(listen_close, _1, ref(window)),
-      bind(listen_typing, _1, ref(input), ref(ctx))
+      bind(listen_typing, _1, input, ctx)
     }
   };
 }
