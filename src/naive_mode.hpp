@@ -17,7 +17,7 @@ namespace tw = transwarp;
 #include "mode.hpp"
 #include "schemes.hpp"
 
-using std::make_unique, std::unique_ptr;
+using std::make_unique, std::unique_ptr, std::move;
 using std::make_shared, std::shared_ptr;
 using std::vector,  std::pair, std::string, std::to_string;
 using std::function, std::bind, std::ref;
@@ -56,6 +56,7 @@ struct Naive {
   Text inputline;
   Text framecounter;
   string* input;
+  vector<phys2d>* physis;
 };
 
 Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window);

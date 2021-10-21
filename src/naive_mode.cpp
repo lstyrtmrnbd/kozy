@@ -85,35 +85,39 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
   
   Text framecounter = default_text(sf::Color::White);
 
-  string* input = new string{""};
+  string* input = new string{"(display \"hi\\n\")"};
   Text inputline = default_text(sf::Color::Cyan);
   inputline.setString(*input);
   inputline.setPosition(0.0f, 32.0f);
 
   //// Initialize physical processes
-  
-  auto physis = make_unique<vector<phys2d>>();
+
+  int total_phys = 3;
+  vector<phys2d>* physis = new vector<phys2d>{total_phys};
 
   auto still_behavior = [](ipair data){ return data; };
   
-  for(int i = 0; i < 3; ++i) {
+  for(int i = 0; i < total_phys; ++i) {
     physis->push_back(phys2d{ipair{0,i}, still_behavior});
   }
   
-  auto tasks = make_unique<vector<shared_ptr<tw::task<void>>>>();
-
   tw::parallel exec{4};
-  auto task = tw::for_each(exec,
-                           physis->begin(),
-                           physis->end(),
-                           [](phys2d& phys){
-                             phys.data = phys.behavior(phys.data);
-                           });
+  auto behavior_task = tw::for_each(exec,
+                                    physis->begin(),
+                                    physis->end(),
+                                    [](phys2d& phys){
+                                      phys.data = phys.behavior(phys.data);
+                                    });
   
+  // force compiler to spit out type :)
+  //decltype(behavior_task)::dummy= 1;
   
   return Mode<Naive> {
     {// initial State
-      inputline, framecounter, input
+      inputline,
+      framecounter,
+      input,
+      physis
     },
      
     [ctx, env, greeting, greeting_sym](Naive& state) {
