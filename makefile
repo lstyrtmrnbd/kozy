@@ -1,8 +1,8 @@
 CXX = g++
 
-CXXFLAGS = -std=c++17 -ggdb -Wall -Wextra -Wpedantic 
+CXXFLAGS = -std=c++17 -ggdb -Wall -Wextra -Wpedantic -pthread
 
-LINK = -lstdc++ -lsfml-graphics -lsfml-window -lsfml-system -lchibi-scheme
+LINK = -lstdc++ -lsfml-graphics -lsfml-window -lsfml-system -lchibi-scheme -pthread
 
 SOURCES = $(wildcard src/*.cpp)
 DEPS = $(wildcard srd/*.h*)

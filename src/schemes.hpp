@@ -31,7 +31,7 @@ template <typename Data>
 function<Data(Data)> scheme_behavior(sexp& ctx, sexp& behavior) {
 
   return [&](Data data) {
-           // not gonna work unless you handle R-values
+           // not gonna work unless you handle R-values?
            return unbox(sexp_apply(ctx, behavior, box(ctx, data)));
          };
 }

@@ -73,8 +73,6 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
   if (!font->loadFromFile("Ricty-Bold.ttf")) {
     std::cout << "Failed to load ricty...\n";
   }
-
-  std::cout << "font init\n";
   
   function<Text(sf::Color)> default_text =
     [&](sf::Color color){
@@ -84,8 +82,6 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
       text.setFillColor(color);
       return text;
     };
-
-  std::cout << "fn def\n";
   
   Text framecounter = default_text(sf::Color::White);
 
@@ -94,7 +90,26 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
   inputline.setString(*input);
   inputline.setPosition(0.0f, 32.0f);
 
-  std::cout << "finner return\n";
+  //// Initialize physical processes
+  
+  auto physis = make_unique<vector<phys2d>>();
+
+  auto still_behavior = [](ipair data){ return data; };
+  
+  for(int i = 0; i < 3; ++i) {
+    physis->push_back(phys2d{ipair{0,i}, still_behavior});
+  }
+  
+  auto tasks = make_unique<vector<shared_ptr<tw::task<void>>>>();
+
+  tw::parallel exec{4};
+  auto task = tw::for_each(exec,
+                           physis->begin(),
+                           physis->end(),
+                           [](phys2d& phys){
+                             phys.data = phys.behavior(phys.data);
+                           });
+  
   
   return Mode<Naive> {
     {// initial State
@@ -107,6 +122,8 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
       string setme = unbox<string>(getme);
       state.framecounter.setString(setme);
       state.inputline.setString(*state.input);
+
+      
       
       // acts on and mutates state
     },
