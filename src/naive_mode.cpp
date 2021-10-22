@@ -100,34 +100,37 @@ Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window) {
   for(int i = 0; i < total_phys; ++i) {
     physis->push_back(phys2d{ipair{0,i}, still_behavior});
   }
-  
-  tw::parallel exec{4};
-  auto behavior_task = tw::for_each(exec,
-                                    physis->begin(),
-                                    physis->end(),
-                                    [](phys2d& phys){
-                                      phys.data = phys.behavior(phys.data);
-                                    });
-  
-  // force compiler to spit out type :)
-  //decltype(behavior_task)::dummy= 1;
-  
+
+  // transwarp executor
+  auto exec = new tw::parallel{4};  
+
   return Mode<Naive> {
     {// initial State
       inputline,
       framecounter,
       input,
       physis
-    },
-     
-    [ctx, env, greeting, greeting_sym](Naive& state) {
+    },  
+    [
+     ctx, env, greeting, greeting_sym, exec
+    ]
+    (Naive& state) {
         
       sexp getme = sexp_env_ref(ctx, env, greeting_sym, greeting);
       string setme = unbox<string>(getme);
       state.framecounter.setString(setme);
       state.inputline.setString(*state.input);
-
       
+      auto behavior_task = tw::for_each(*exec,
+                                        state.physis->begin(),
+                                        state.physis->end(),
+                                        [](phys2d& phys){
+                                          phys.data = phys.behavior(phys.data);
+                                        });
+      
+      // force compiler to spit out type :)
+      //decltype(behavior_task)::dummy= 1;
+      behavior_task->wait();
       
       // acts on and mutates state
     },
