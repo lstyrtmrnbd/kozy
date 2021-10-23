@@ -10,6 +10,7 @@ using std::vector, std::function;
 
 using sf::Time, sf::Clock;
 using sf::Window, sf::Event;
+using sf::RenderWindow;
 
 /**
  * Mode
@@ -23,9 +24,10 @@ template <typename State>
 struct Mode {
   State state;
   function<void(State&)> physics;
-  function<void(State&)> rendition;
+  function<void(State&, RenderWindow&)> rendition;
   vector<function<void(Event&)>> handlers;
 };
+// these are essentially parameters of the following function
 
 template <typename State>
 void do_mode(Mode<State>& mode, Window& window) {
@@ -61,6 +63,6 @@ void do_mode(Mode<State>& mode, Window& window) {
 
     accumulator %= dt;
     
-    mode.rendition(mode.state); // state gets rendered
+    mode.rendition(mode.state, static_cast<RenderWindow&>(window)); // state gets rendered
   }
 }

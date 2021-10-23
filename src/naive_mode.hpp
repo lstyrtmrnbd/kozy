@@ -29,7 +29,7 @@ using sf::Keyboard, sf::Event, sf::Window, sf::RenderWindow, sf::Text;
 
 bool key_p(Event& event, Keyboard::Key key);
 void dostring(sexp ctx, const string& dome);
-void listen_close(Event& event, RenderWindow& window);
+void listen_close(Event& event, Window& window);
 void process_backspaces(string& str);
 void process_enter(string& str, sexp ctx);
 void listen_typing(Event& event, string* buf, sexp ctx);
@@ -43,20 +43,19 @@ struct Physical {
   function<Data(Data)> behavior;
 };
 
+// our physical objects of 2 dimensions
 using ipair = pair<int, int>;
-using phys2d = Physical<ipair>;
+//using phys2d = Physical<ipair>;
 
-// template <typename Data>
-// unique_ptr<vector<tw::task>> runBehaviors(vector<Physical<Data>>&);
+using pos_speed = pair<ipair, ipair>;
 
-//using naive = Physical<vector<ipair>>;
-//using naive = int;
+using phys2d = Physical<pos_speed>;
 
 struct Naive {
   Text inputline;
   Text framecounter;
   string* input;
-  vector<phys2d>* physis;
+  vector<phys2d>* physicals;
 };
 
-Mode<Naive> make_naive_mode(sexp ctx, RenderWindow& window);
+Mode<Naive> make_naive_mode(sexp ctx, Window& window);
